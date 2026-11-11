@@ -28,7 +28,7 @@ var score = {home:0, guest:0};
 var protocol = new tcf.Protocol();
 
 protocol.addCommandHandler('Ping','echo', function (c, msg) {
-    if (!msg) throw ({msg:'Invalid argument'});
+    if (!msg) throw new Error('Invalid argument');
     /* randomly fail to send the ball back */
     console.log ("received Ping");
     setTimeout(serve, 0);
@@ -72,7 +72,6 @@ var serve = function () {
 
 /* test service ping */
 var client = new tcf.Client(protocol);
-var client2 = new tcf.Client(protocol);
 
 var onClose = function() {
     console.log ('channel closed');

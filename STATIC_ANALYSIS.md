@@ -141,3 +141,16 @@ Hinweis: `test/client.js` läuft unter Node 22 / OpenSSL 3 nicht mehr (`ca md to
 19. **M7:** `symbols_cache.js` löschen oder fertigstellen.
 20. ESLint auf eine aktuelle Version mit Flat Config heben, Regeln aus dieser Analyse übernehmen, `/* global */`-Kommentare entfernen, in `npm test` bzw. CI einhängen.
 21. devDependencies aktualisieren (`mocha` fest pinnen, `bower`-Postinstall entfernen, falls nicht mehr benötigt).
+
+**Status Phase 5 (2026-11-11): erledigt.** `npm test` führt jetzt ESLint und alle Tests aus (37 bestanden, 2 Agent-Tests ohne C-Agent übersprungen). Umsetzung:
+
+- **M6 `service.js` repariert** statt entfernt (kein Breaking Change an `tcf.Service`): `sendEvent` sendet an alle Kanäle der Broadcast-Gruppe, `addCommand` erkennt doppelte Kommandos und wirft einen `Error`, `getArgsSchemas` liefert das Schema, `exec` übergibt die Argumente an den Handler (`this` ist der Service). 2 Tests, die gegen die alte Version fehlschlagen.
+- **M7:** `symbols_cache.js` gelöscht. **M9:** totes `peerFromUrl` aus `peer.js` entfernt; außerdem ungenutzte Variablen in den Interface-Definitionen, Tests und Beispielen.
+- **ESLint 10** mit Flat Config (`eslint.config.js`, ersetzt `.eslintrc.json`): `recommended` plus `no-throw-literal`, `no-loop-func`, `array-callback-return` u. a. als Fehler. Node-, Browser- und Mocha-Globals kommen aus der Konfiguration, die `/* global */`-Kommentare sind entfernt. `npm run lint` meldet 0 Probleme und läuft als `pretest`. **Bewusst nicht aktiviert:** `eqeqeq` (Vergleiche Zahl/String sind teils beabsichtigt, z. B. beim Reply-Token), `no-shadow`, `no-use-before-define` und `consistent-return` (bei diesem Code nur Rauschen). Es gibt im Repo keine CI-Konfiguration; `npm test` ist der Einstiegspunkt dafür.
+- **devDependencies:** eslint 10, mocha 12 (statt `*`), chai 4.5 und chai-as-promised 7 (letzte CommonJS-Versionen), browserify 17, jsdoc 4. `bower` und der `postinstall`-Schritt sind entfernt (`bower.json` hat keine Abhängigkeiten; die Datei selbst bleibt). `xunit-file` bleibt, falls ein externes CI den Reporter nutzt.
+- **Skripte plattformunabhängig:** `build` ohne `mkdir -p`/Umleitung, `test`/`doc` ohne `./node_modules/.bin/`. `npm test` nimmt alle `test/*.js` (der Agent-Test überspringt sich selbst).
+- **`dist/tcf.js` neu gebaut** (browserify 17, 323 KB, ohne `crypto-browserify`; Smoke-Test mit Fake-`WebSocket` erfolgreich).
+- **README** an die tatsächliche API angepasst: Service-Funktionen liefern Promises (keine Callbacks), `connect`-Signatur mit `options`/`onError`, `connectDefered`, IPv6-Schreibweise, `npm run build`, Hinweise zu Lint und Agent-Tests.
+- `npm audit` (inkl. Dev): 0 Schwachstellen in Laufzeit-Abhängigkeiten; 10 niedrige/moderate in Dev-Werkzeugen (`minimatch`/`glob` über eslint 10 und mocha 12, `elliptic` über browserify). Der vorgeschlagene „Fix“ wäre ein Downgrade; da die Werkzeuge nur lokal laufen und `crypto-browserify` nicht ins Bundle gelangt, bleibt das so.
+
+Offen aus der Analyse (nicht Teil des Plans): TLS über TCP (M8), Binary-Ergebnisse als `Uint8Array` (Breaking Change, siehe Phase 2), Fehlerantwort statt Kanalabbruch bei werfenden Command-Handlern (Breaking Change, siehe Phase 2). `.vscode/launch.json` startet Mocha mit `-u tdd`, die Tests nutzen aber `describe`/`it` (BDD).

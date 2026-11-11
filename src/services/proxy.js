@@ -43,7 +43,7 @@ function TcfListenerIf() {
             var ev = {name : evName};
             args.forEach((arg, i) => {
                 if (proto[i]) ev[proto[i]] = arg;
-            })
+            });
 
             for (idx = 0; idx < listeners.length; idx++) {
                 if (typeof listeners[idx][ev.name] == 'undefined') continue;
@@ -83,7 +83,7 @@ module.exports = function  Proxy(svcInterface, c) {
                     });
                     return res;
                 });
-        }
+        };
         this[cmd.name] = fn.bind(self, cmd);    
     });
 
@@ -100,5 +100,5 @@ module.exports = function  Proxy(svcInterface, c) {
         // install handler on the channel
         c.addEventHandler(svcInterface.name, ev.name, listeners.notify.bind(this, argsName, ev.name));
      });
-}
+};
 

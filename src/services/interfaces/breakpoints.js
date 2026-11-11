@@ -19,7 +19,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-var schemas = require('../schemas.js')
+var schemas = require('../schemas.js');
 var scs = schemas.types;
 
 var bpID = {title: "bpID", type:'string'};
@@ -69,4 +69,4 @@ module.exports = {
         {name: "contextChanged", args: [bpIDList] },
         {name: "contextRemoved", args: [bpIDList] },
     ]
-}
+};

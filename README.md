@@ -15,7 +15,7 @@ npm install
 ### generate a browser library
 
 ```
-npm run dist
+npm run build
 ```
 
 ### generate the JSDOC
@@ -29,6 +29,10 @@ npm run doc
 ```
 npm test
 ```
+
+`npm test` runs ESLint (`npm run lint`) and the mocha tests. The tests in
+`test/c-agent.js` need a running TCF agent and are skipped otherwise; set
+`TCF_AGENT_PEER` to the agent peer url (default `TCP::1534`).
 
 ### License
 This code is released under the MIT License.
@@ -69,10 +73,15 @@ var client = new tcf.Client();
   The client object has the following properties :
 ```js
   {
-    connect: function(peer, onConnect, onClose)
-      peer is the tcf peer id of the form [WS or WSS]:[Hostname]:[Port]
+    connect: function(peer, [options], onConnect, onClose, onError)
+      peer is the tcf peer id of the form [TCP, WS or WSS]:[Hostname]:[Port],
+        an IPv6 address is enclosed in brackets: TCP:[::1]:1534
+      options : TLS options for WSS connections (optional)
       onConnect : function called when the tcf channel is established
-      onClosed: function called when the tcf channel is closed
+      onClose: function called when the tcf channel is closed
+      onError: function called on a connection or communication error
+    connectDefered: function(peer, [options])
+      returns a Promise resolved with the client once the channel is established
     close: function()
     svc: {}
       The svc object will be populated when the connection is established.
@@ -81,22 +90,22 @@ var client = new tcf.Client();
       proxy i.e :
 
       Breakpoints: Object
-        add: function (bpData, cb) {
+        add: function (bpData) {
         addListener: function (listener) {
-        change: function (bpData, cb) {
-        disable: function (bpIDList, cb) {
-        enable: function (bpIDList, cb) {
-        getCapabilities: function (ctxID, cb) {
-        getIds: function (cb) {
-        getProperties: function (bpID, cb) {
-        getStatus: function (bpID, cb) {
-        remove: function (bpIDList, cb) {
+        change: function (bpData) {
+        disable: function (bpIDList) {
+        enable: function (bpIDList) {
+        getCapabilities: function (ctxID) {
+        getIds: function () {
+        getProperties: function (bpID) {
+        getStatus: function (bpID) {
+        remove: function (bpIDList) {
         removeListener: function (listener) {
-        set: function (bpList, cb) {
+        set: function (bpList) {
         __proto__: Object
       LineNumbers: Object
-        mapToMemory: function (ctxID, file, line, column, cb) {
-        mapToSource: function (ctxID, addr0, addr1, cb) {
+        mapToMemory: function (ctxID, file, line, column) {
+        mapToSource: function (ctxID, addr0, addr1) {
         __proto__: Object
       ...
   }
@@ -104,20 +113,17 @@ var client = new tcf.Client();
 
   Example to call a service function
 
-  All service functions accept a callback that will be called unpon command completion :
-```js
-
-    c.svc['Breakpoints'].add({}, function (res){})
-    The result of a particular command is an object :
-    res = {
-      err: [error object or null if successfull]
-      [command specific return values]
-    }
-```
-
-  Promises
   All service functions return a Promise that will resolve upon command completion.
-  In this case the callback parameter can be ommitted.
+  The result of a particular command is an object :
+```js
+    c.svc['Breakpoints'].add({})
+    .then(function (res) {
+      res = {
+        err: [error object or null if successfull]
+        [command specific return values]
+      }
+    });
+```
 
   example :
 ```js
@@ -154,7 +160,7 @@ var client = new tcf.Client();
 
     For services emitting events, you need to register an event listener as follow :
 ```js
-    c.svc.RunControl.addListerner({
+    c.svc.RunControl.addListener({
       'contextAdded' : function (ev) {...},
       'contextRemoved' : function (ev) {...},
       ...
@@ -167,9 +173,11 @@ var client = new tcf.Client();
 var tcf = require('tcf');
 
 var client = new tcf.Client();
-var c = client.connect('WS:127.0.0.1:1234');
 
-c.svc.ProcessesV1.getChildren ("", false)
+client.connectDefered('WS:127.0.0.1:1234')
+.then (function (c) {
+    return c.svc.ProcessesV1.getChildren ("", false);
+})
 .then (function (res) {
     //Success
 })

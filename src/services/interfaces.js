@@ -56,7 +56,7 @@ var services = {
     SysMonitor: require('./interfaces/sysmonitor.js'),
     Terminals: require('./interfaces/terminals.js'),
     PortForward: require('./interfaces/portforward.js'),
-}
+};
 
 function addService(prototype) {
     utils.assert (!services[prototype.name]);

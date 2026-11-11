@@ -244,7 +244,7 @@ function Channel(protocol) {
             writeStream(3);
             writeStream(3);
             var n = str.length;
-            while (true) { // eslint-disable-line no-constant-condition
+            while (true) {  
                 if (n <= 0x7f) {
                     writeStream(n);
                     break;
@@ -410,7 +410,7 @@ function Channel(protocol) {
             var cargsParsers = proto.getCommandArgsParsers(svc, name);
 
             /* parse arguments */
-            while ((ch = peekStream()) != MARKER_EOM) {
+            while (peekStream() != MARKER_EOM) {
                 if (cargsParsers[res_idx] === 'binary') {
                     args.push(atob(parseJSON(readStringz())));
                 }
@@ -547,9 +547,7 @@ function Channel(protocol) {
                 case 2: //EOS
                     // Channel closed by remote peer
                     eof = true;
-                    Timers.setImmediate(() => {
-                        channel.close();
-                    });
+                    Timers.setImmediate(sendEofAndClose);
                     break;
             }
         }

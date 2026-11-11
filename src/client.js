@@ -22,8 +22,6 @@
  * SOFTWARE.
  */
 
-/* global exports Promise console Uint8Array */
-
 var channel = require('./channel.js');
 var peer = require('./peer.js');
 var proto = require('./protocol.js');
@@ -80,13 +78,13 @@ exports.Client = function Client(interfaces, protocol) {
     this.on = function on(ev, cb) {
         if (!evs[ev]) evs[ev] = [];
         evs[ev].push(cb);
-    }
+    };
     
     this.off = function off(ev, cb) {
         if (!evs[ev]) return;
         let i = evs[ev].indexOf(cb);
         if (i >= 0) evs[ev].splice(i, 1);
-    }
+    };
     
     function emit(ev) {
         evs[ev] && evs[ev].forEach ((cb) => {
@@ -115,12 +113,12 @@ exports.Client = function Client(interfaces, protocol) {
     this.connectDefered = function connectDefered(url, options) {
         return new Promise((resolve, reject) => {
             self.connect(url, options,
-                () => { resolve (self)},
+                () => { resolve (self);},
                 () => {},
-                (error) => { reject(error)} 
+                (error) => { reject(error);} 
             );                
-        })
-    }
+        });
+    };
 
     /**
      * Connection options - These are inherited from the tls.createSecureContext 

@@ -96,37 +96,6 @@ function peer_from_url(url) {
 }
 
 
-// Convert a TCF URL : (TCP|WS[S]):<host>([:<port>]|[<uri>]) to a WS[S] url
-// The TCF WS URL is of the form: wss://<host>([:<port>/tcf]|[<uri>])
-var peerFromUrl = function peerFromUrl(url) {
-    var pcol;
-    var items = [];
-    var peer = {};
-
-    if (!url || url === '') throw new Error('Invalid peer url');
-    if (url.indexOf("ws://", 0) === 0 || url.indexOf("wss://", 0) === 0) {
-        // url is already an TCF WS URL.
-        peer.url = url;
-        return peer;
-    }
-    items = url.split(":");
-    peer.prot = items[0];
-    peer.hostname = items[1];
-    peer.port = items[2];
-    if (url.substring(0, 3) === "TCP") peer.url = url;
-    else {
-        if (url.substring(0, 3) === "WSS") pcol = "wss://";
-        else if (url.substring(0, 3) === "WS:") pcol = "ws://";
-        else return null;
-        peer.url = pcol + peer.hostname;
-        if (peer.port) {
-            peer.url += ":" + peer.port + "/tcf";
-        }
-    }
-    /* + "/xxx" bit is for IE10 workaround */
-    return peer;
-};
-
 module.exports = {
     peer_from_url: peer_from_url
 };

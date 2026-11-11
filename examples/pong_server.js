@@ -25,7 +25,7 @@ var fs = require('fs');
 var protocol = new tcf.Protocol();
 
 protocol.addCommandHandler('Pong','echo', function (c, msg) {
-    if (!msg) throw {msg:'Invalid argument'};
+    if (!msg) throw new Error('Invalid argument');
     /* randomly fail to send the ball back */
     console.log ("received Pong");
 
@@ -50,7 +50,7 @@ var returnPing = function (client) {
 
 /* test service ping */
 
-var server = new tcf.Server('WSS:localhost:20001', protocol, {
+new tcf.Server('WSS:localhost:20001', protocol, {
     cert: fs.readFileSync('test/certs/server-crt.pem'),
     key: fs.readFileSync('test/certs/server-key.pem'),
     ca: fs.readFileSync('test/certs/ca-crt.pem')

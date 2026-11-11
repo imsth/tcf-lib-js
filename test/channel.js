@@ -2,8 +2,6 @@
  * TCF channel regression tests
  */
 
-/* global describe, before, after, it */
-
 "use strict";
 
 var chai = require("chai");
@@ -539,6 +537,40 @@ describe('tcf-channel', function () {
                 expect(err.code).to.equal('EADDRINUSE');
             })
             .finally(() => { blocker.close(); });
+    });
+
+    it('should send service events to the channels of the broadcast group', function () {
+        var bcg = new tcf.BroadcastGroup();
+        var c1 = createChannel();
+        var c2 = createChannel();
+        bcg.addChannel(c1);
+        bcg.addChannel(c2);
+        bcg.addChannel(c1);     // already in the group
+
+        var svc = new tcf.Service('Test', bcg);
+        svc.sendEvent('changed', {id: 'ü'});
+
+        [c1, c2].forEach(c => {
+            expect(c.sent).to.have.length(1);
+            expect(c.sent[0].toString('utf8').split('\0').slice(0, 4))
+                .to.deep.equal(['E', 'Test', 'changed', '{"id":"ü"}']);
+        });
+    });
+
+    it('should register and execute service commands', function () {
+        var svc = new tcf.Service('Test');
+        var argsSchema = [{type: 'string'}];
+        var resSchema = [{title: 'err', type: 'object'}];
+
+        svc.addCommand('echo', function (args) {
+            expect(this).to.equal(svc);
+            return [null, args[0]];
+        }, argsSchema, resSchema);
+
+        expect(() => svc.addCommand('echo', () => {})).to.throw(Error, 'already defined');
+        expect(svc.getArgsSchemas('echo')).to.equal(argsSchema);
+        expect(svc.getResSchemas('echo')).to.equal(resSchema);
+        expect(svc.exec('echo', ['hello'])).to.deep.equal([null, 'hello']);
     });
 
     it('should generate version 4 UUIDs', function () {

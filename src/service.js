@@ -23,8 +23,6 @@
  *  service.js - construct a tcf service object 
  */
 
-/* global exports */
-
 /**
  * Broacast 
  * 
@@ -61,36 +59,37 @@ var Service = function(svc, _bcg) {
 };
 
 Service.prototype.sendEvent = function(ev, arg) {
-    var i;
-    for (i = 0; i < this.broadcast.length; i++) {
-        this.broadcast[i].sendEvent(this.name, ev, arg);
-    }
+    // send the event to all channels of the broadcast group
+    this.bcg.bcg.forEach(function(c) {
+        c.sendEvent(this.name, ev, arg);
+    }, this);
 };
 
 Service.prototype.addCommand = function(cmd, ch, argsSchema, resSchema) {
-    if (this.proto.cmd) throw 'command already defined';
+    if (this.proto[cmd]) throw new Error('command ' + cmd + ' already defined');
     this.proto[cmd] = {
         handler: ch,
         argsSchema: argsSchema,
         resSchema: resSchema
-    }
+    };
 };
 
 Service.prototype.getArgsSchemas = function (cmd) {
-    return this.proto[cmd].argSchema;
-}
+    return this.proto[cmd].argsSchema;
+};
 
 Service.prototype.getResSchemas = function (cmd) {
     return this.proto[cmd].resSchema;
-}
+};
 
 /**
  * Execute a command of the service
- * 
- * cmd : command string 
+ *
+ * cmd : command string
+ * args : command arguments, passed to the command handler
  */
 Service.prototype.exec = function (cmd, args) {
-    return this.proto[cmd].handler.call(args);
+    return this.proto[cmd].handler.call(this, args);
 };
 
 exports.Broadcast = Broadcast;

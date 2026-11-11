@@ -20,7 +20,7 @@
  * SOFTWARE.
  */
 
-var schemas = require('../schemas.js')
+var schemas = require('../schemas.js');
 var types = schemas.types;
 var cmds = schemas.commands;
 

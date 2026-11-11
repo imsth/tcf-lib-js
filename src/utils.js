@@ -32,7 +32,28 @@ function assert(condition, message) {
     }
 }
 
+/*
+ * Encode binary data to base64. Accepts a binary string (one char per byte),
+ * an ArrayBuffer or a typed array (Uint8Array, Buffer, ...).
+ */
+function toBase64(data) {
+    if (data === null || data === undefined) return data;
+    if (typeof data === 'string') return btoa(data);
+
+    var bytes = data instanceof ArrayBuffer ?
+        new Uint8Array(data) :
+        new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
+    var str = '';
+    var i;
+    // convert by chunks to stay below the maximum number of call arguments
+    for (i = 0; i < bytes.length; i += 0x8000) {
+        str += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+    }
+    return btoa(str);
+}
+
 module.exports = {
     get_agent_id: get_agent_id,
-    assert: assert
+    assert: assert,
+    toBase64: toBase64
 };

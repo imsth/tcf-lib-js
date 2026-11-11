@@ -74,18 +74,32 @@ Protocol.prototype.addCommandHandler = function(svc, cmd, ch, parsers) {
  */
 Protocol.prototype.addEventHandler = function (svc, ev, eh, parsers) {
     if( !this._ev[svc] ) this._ev[svc] = {};
-    this._svc[svc][ev] = {eh: eh, parsers: parsers};
+    this._ev[svc][ev] = {eh: eh, parsers: parsers};
+};
+
+Protocol.prototype.hasCommandHandler = function (svc, cmd) {
+    return !!(this._svc[svc] && this._svc[svc][cmd] && this._svc[svc][cmd].ch);
 };
 
 Protocol.prototype.execCommandHandler = function (c, svc, cmd, args) {
-    if (!this._svc[svc][cmd].ch) throw "Invalid command handler";
-    var res = this._svc[svc][cmd].ch(c, args);
+    if (!this.hasCommandHandler(svc, cmd)) return Promise.reject(new Error("Invalid command handler"));
+    var res;
+    try {
+        res = this._svc[svc][cmd].ch(c, args);
+    }
+    catch (err) {
+        return Promise.reject(err);
+    }
     if (res && res.then) return res;
     else return Promise.resolve(res);
 };
 
 Protocol.prototype.getCommandArgsParsers = function (svc, cmd) {
-    return this._svc[svc][cmd].parsers || [];
+    return (this.hasCommandHandler(svc, cmd) && this._svc[svc][cmd].parsers) || [];
+};
+
+Protocol.prototype.getEventHandler = function (svc, ev) {
+    return (this._ev[svc] && this._ev[svc][ev]) || undefined;
 };
 
 Protocol.prototype.getServiceList = function () {

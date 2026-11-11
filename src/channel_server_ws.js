@@ -68,7 +68,7 @@ module.exports = function channel_create_ws_server(ps, options) {
     /* for WSS connection create a https server separatly */
     if(ps.getprop('TransportName') === 'WSS') {
         var options = ps.getprop('options');
-        if (!options || !options.key || !options.cert) throw 'options.key and options.cert are mandatory for wss server';
+        if (!options || !options.key || !options.cert) throw new Error('options.key and options.cert are mandatory for wss server');
         var httpsServer = https.createServer(Object.assign(wsOptions, options)).listen(wsOptions.port);
         serverChannel.server = new webSocket.Server({server: httpsServer});
     }

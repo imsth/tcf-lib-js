@@ -85,7 +85,7 @@ exports.Client = function Client(interfaces, protocol) {
     this.off = function off(ev, cb) {
         if (!evs[ev]) return;
         let i = evs[ev].indexOf(cb);
-        if (i) evs[ev].splice(i, 1);
+        if (i >= 0) evs[ev].splice(i, 1);
     }
     
     function emit(ev) {
@@ -94,8 +94,8 @@ exports.Client = function Client(interfaces, protocol) {
                 cb();
             }
             catch (err) {
-
-            };
+                console.error("Exception in TCF client '" + ev + "' listener:", err);
+            }
         });
     }
 
@@ -145,15 +145,20 @@ exports.Client = function Client(interfaces, protocol) {
         }
 
 
+        var cc;
+        var connectError;
+
         try {
             var ps = peer.peer_from_url(url);
-            var cc = channelClient(ps, options);
+            cc = channelClient(ps, options);
+            if (!cc) connectError = new Error("Unsupported transport " + ps.getprop("TransportName"));
         }
         catch (error) {
-
+            connectError = error;
         }
 
         if (!cc) {
+            if (onerror) setTimeout(onerror, 0, connectError);
             return -1;
         }
 
@@ -199,11 +204,15 @@ exports.Client = function Client(interfaces, protocol) {
                 // Store all services in the channel too
                 c.svc = self.svc;
 
-                if (self.queryAttrs) {
+                if (self.queryAttrs && self.svc.Locator) {
                     // Get the agent ID and peer attributes before configuring the profiler
-                    self.svc.Locator.getAgentID(function (res) {
-                        var agentID = res.agentID;
-                        self.svc.Locator.getPeers(function (res) {
+                    var agentID;
+                    self.svc.Locator.getAgentID()
+                        .then(function (res) {
+                            agentID = res.agentID;
+                            return self.svc.Locator.getPeers();
+                        })
+                        .then(function (res) {
                             if (res.attrsList && agentID) {
                                 for (var i = 0; i < res.attrsList.length; i++) {
                                     var attrs = res.attrsList[i];
@@ -212,10 +221,14 @@ exports.Client = function Client(interfaces, protocol) {
                                     }
                                 }
                             }
-
+                        })
+                        .catch(function (err) {
+                            // the connection is usable without the peer attributes
+                            console.error('Unable to get the TCF peer attributes:', err);
+                        })
+                        .then(function () {
                             if (onconnect) setTimeout(onconnect);
                         });
-                    });
                 }
                 else if (onconnect) {
                     setTimeout(onconnect);

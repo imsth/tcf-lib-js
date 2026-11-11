@@ -20,6 +20,8 @@
  * SOFTWARE.
  */
 
+var utils = require('../utils.js');
+
 // TcfListenerIf : creates a listener object that is used to forward TCF events.
 
 
@@ -44,8 +46,13 @@ function TcfListenerIf() {
             })
 
             for (idx = 0; idx < listeners.length; idx++) {
-                if (typeof listeners[idx][ev.name] != 'undefined')
+                if (typeof listeners[idx][ev.name] == 'undefined') continue;
+                try {
                     listeners[idx][ev.name](ev);
+                }
+                catch (err) {
+                    console.error('Exception in TCF ' + evName + ' event listener:', err);
+                }
             }
         }
     };
@@ -61,7 +68,7 @@ module.exports = function  Proxy(svcInterface, c) {
             /* transform parameter according to schema.
              * For now we only handle binary args */
             var args = cmd.args.map((arg, i) => {
-                if (arg.type === 'binary') return btoa(arguments[i + 1]);
+                if (arg.type === 'binary') return utils.toBase64(arguments[i + 1]);
                 else return arguments[i + 1];
             });
             return c.sendCommand(svcInterface.name, cmd.cmd || cmd.name, args)

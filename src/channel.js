@@ -117,7 +117,22 @@ function Channel(protocol) {
     setProtocol(protocol);
 
     var options = require('./options.js').get();
-    var JSONbig = require('json-bigint')({storeAsString: options.bigNumAsString});
+    var JSONbig = require('json-bigint')({
+        storeAsString: options.bigNumAsString,
+        // drop keys of received objects that could alter prototypes
+        protoAction: 'ignore',
+        constructorAction: 'ignore'
+    });
+
+    // json-bigint creates objects without prototype: return plain objects
+    var parseJSON = function parseJSON(text) {
+        return JSONbig.parse(text, function(key, value) {
+            if (value && typeof value === 'object' && Object.getPrototypeOf(value) === null) {
+                return Object.assign({}, value);
+            }
+            return value;
+        });
+    };
 
     var enableZeroCopy = function(enable) {
         hasZeroCopySupport = enable;
@@ -342,7 +357,7 @@ function Channel(protocol) {
     };
 
     var eventLocatorHello = function eventLocatorHello() {
-        peerServices = JSONbig.parse(readStringz());
+        peerServices = parseJSON(readStringz());
         // ZeroCopy is used only if enabled locally and supported by the peer
         hasZeroCopySupport = hasZeroCopySupport && peerServices.indexOf("ZeroCopy") >= 0;
         var eom = readStream();
@@ -397,9 +412,9 @@ function Channel(protocol) {
             /* parse arguments */
             while ((ch = peekStream()) != MARKER_EOM) {
                 if (cargsParsers[res_idx] === 'binary') {
-                    args.push(atob(JSONbig.parse(readStringz())));
+                    args.push(atob(parseJSON(readStringz())));
                 }
-                else args.push(JSONbig.parse(readStringz()));
+                else args.push(parseJSON(readStringz()));
                 res_idx++;
             }
 
@@ -440,9 +455,9 @@ function Channel(protocol) {
                         rargs.push(null);
                     else {
                         if (rh.parsers && rh.parsers[res_idx] === 'binary') {
-                            rargs.push(atob(JSONbig.parse(arg)));
+                            rargs.push(atob(parseJSON(arg)));
                         }
-                        else rargs.push(JSONbig.parse(arg));
+                        else rargs.push(parseJSON(arg));
                     }
                 }
                 res_idx++;
@@ -486,9 +501,9 @@ function Channel(protocol) {
 
                 while (peekStream() != MARKER_EOM) {
                     if (eargsParsers[ev_idx] === 'binary') {
-                        eargs.push(atob(JSONbig.parse(readStringz())));
+                        eargs.push(atob(parseJSON(readStringz())));
                     }
-                    else eargs.push(JSONbig.parse(readStringz()));
+                    else eargs.push(parseJSON(readStringz()));
                     ev_idx++;
                 }
                 skipUntilEOM();
@@ -590,7 +605,10 @@ function Channel(protocol) {
     };
 
     function onData(typedArray) {
-        var data = new Uint8Array(typedArray);
+        // accept an ArrayBuffer or a view on it (e.g. a Node.js Buffer)
+        var data = ArrayBuffer.isView(typedArray) ?
+            new Uint8Array(typedArray.buffer, typedArray.byteOffset, typedArray.byteLength) :
+            new Uint8Array(typedArray);
         var used = ibuf.length;
 
         updateMessageCount(data);

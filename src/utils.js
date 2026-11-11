@@ -20,7 +20,22 @@
  * SOFTWARE.
  */
 
-var agent_id = require('uuid').v4();
+var nodeCrypto = require('crypto');     // empty object in the browser build
+
+// Returns a random (version 4) UUID
+function randomUUID() {
+    if (nodeCrypto.randomUUID) return nodeCrypto.randomUUID();
+
+    // Browser: crypto.randomUUID() is only available in secure contexts
+    var bytes = globalThis.crypto.getRandomValues(new Uint8Array(16));
+    bytes[6] = (bytes[6] & 0x0f) | 0x40;
+    bytes[8] = (bytes[8] & 0x3f) | 0x80;
+    var hex = Array.from(bytes, b => (b + 0x100).toString(16).slice(1)).join('');
+    return hex.slice(0, 8) + '-' + hex.slice(8, 12) + '-' + hex.slice(12, 16) + '-' +
+        hex.slice(16, 20) + '-' + hex.slice(20);
+}
+
+var agent_id = randomUUID();
 
 function get_agent_id() {
     return agent_id;
@@ -52,8 +67,15 @@ function toBase64(data) {
     return btoa(str);
 }
 
+// Returns the host part of a URL: IPv6 addresses are enclosed in brackets
+function urlHost(host) {
+    return host && host.indexOf(':') >= 0 ? '[' + host + ']' : host;
+}
+
 module.exports = {
     get_agent_id: get_agent_id,
     assert: assert,
-    toBase64: toBase64
+    toBase64: toBase64,
+    randomUUID: randomUUID,
+    urlHost: urlHost
 };

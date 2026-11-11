@@ -21,10 +21,11 @@
  */
 var webSocket = require('ws');
 var channel = require('./channel.js');
+var utils = require('./utils.js');
 var https = require('https');
 const url = require('url');
 
-module.exports = function channel_create_ws_server(ps, options) {
+module.exports = function channel_create_ws_server(ps) {
     var host = ps.getprop('Host');
     var port = ps.getprop('Port');
 
@@ -33,28 +34,20 @@ module.exports = function channel_create_ws_server(ps, options) {
     }
 
     if (!ps.url) {
-        ps.url = ps.getprop('TransportName').toLowerCase() + "://" + host + ':' + port;
+        ps.url = ps.getprop('TransportName').toLowerCase() + "://" + utils.urlHost(host) + ':' + port;
     }
 
-    var parsedUrl = require('url').parse(ps.url);
+    var parsedUrl = url.parse(ps.url);
 
     var wsOptions = {
-        port: port,
-        handleProtocols: function(subprotocols, cb) {
-
-            if (subprotocols.length == 1 && subprotocols[0] == "") {
-                return cb(true, "");
-            }
-
-            return cb(subprotocols.length == 1 && subprotocols[0] == "tcf", "tcf");
+        // accept clients requesting the "tcf" sub-protocol or none
+        handleProtocols: function(protocols) {
+            return protocols.has("tcf") ? "tcf" : false;
         }
     };
 
-    if (host) {
-        wsOptions.host = host;
-    }
-
-    if (parsedUrl.pathname) {
+    // restrict the connections to the path of the url, if one is given
+    if (parsedUrl.pathname && parsedUrl.pathname != '/') {
         wsOptions.path = parsedUrl.pathname;
     }
 
@@ -62,28 +55,31 @@ module.exports = function channel_create_ws_server(ps, options) {
         ps: ps,
         server: null,
         onconnection: null,
-        channel: null
+        onerror: null
     };
 
     /* for WSS connection create a https server separatly */
     if(ps.getprop('TransportName') === 'WSS') {
         var options = ps.getprop('options');
         if (!options || !options.key || !options.cert) throw new Error('options.key and options.cert are mandatory for wss server');
-        var httpsServer = https.createServer(Object.assign(wsOptions, options)).listen(wsOptions.port);
-        serverChannel.server = new webSocket.Server({server: httpsServer});
+        wsOptions.server = https.createServer(options).listen(port);
     }
     else {
-        serverChannel.server = new webSocket.Server(wsOptions);
+        wsOptions.port = port;
+        if (host) wsOptions.host = host;
     }
+    serverChannel.server = new webSocket.Server(wsOptions);
 
-    serverChannel.server.on('connection', function(wsSocket) {
+    serverChannel.server.on('connection', function(wsSocket, req) {
         // A new connection
         var c = new channel.Channel();
 
+        wsSocket.binaryType = 'arraybuffer';
+
         // Build the connection parameters from the url
-        c.connectionParams = url.parse(wsSocket.upgradeReq.url, true, true).query;
-        c.connectionParams._url = wsSocket.upgradeReq.url;
-        
+        c.connectionParams = url.parse(req.url, true, true).query;
+        c.connectionParams._url = req.url;
+
         wsSocket.onclose = function() {
             c.onClosed();
         };
@@ -101,15 +97,14 @@ module.exports = function channel_create_ws_server(ps, options) {
         };
 
         c.flushOutput = function wsFlushOutput(typedArray) {
-            wsSocket.send(typedArray.buffer);
+            wsSocket.send(typedArray);
         };
 
         serverChannel.onconnection(serverChannel, c);
     });
 
-
     serverChannel.server.on('error', function(error) {
-        console.error("Error of WS server:", error);
+        if (serverChannel.onerror) serverChannel.onerror(error);
     });
 
     return serverChannel;

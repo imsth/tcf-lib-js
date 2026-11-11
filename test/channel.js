@@ -464,4 +464,98 @@ describe('tcf-channel', function () {
             expect(res[0] === text).to.equal(true);
         });
     });
+
+    it('should parse big numbers as strings and ignore prototype keys', function () {
+        var c = createChannel();
+        var reply = c.sendCommand('Test', 'run', []);
+
+        c.onData(rawMessage(['R', '2',
+            '{"n":12345678901234567890,"o":{"a":1},"__proto__":{"polluted":true}}']));
+        return reply.then(res => {
+            var obj = res[0];
+            expect(obj.n).to.equal('12345678901234567890');
+            expect(obj.polluted).to.equal(undefined);
+            expect(Object.keys(obj)).to.deep.equal(['n', 'o']);
+            // received objects are plain objects
+            expect(Object.getPrototypeOf(obj)).to.equal(Object.prototype);
+            expect(Object.getPrototypeOf(obj.o)).to.equal(Object.prototype);
+        });
+    });
+
+    it('should parse IPv6 peer urls', function () {
+        var peer = require('../src/peer.js');
+        var ps = peer.peer_from_url('TCP:[::1]:1534');
+        expect(ps.getprop('TransportName')).to.equal('TCP');
+        expect(ps.getprop('Host')).to.equal('::1');
+        expect(ps.getprop('Port')).to.equal('1534');
+
+        ps = peer.peer_from_url('WS::20001/test?arg1=test1');
+        expect(ps.props.Host).to.equal('');
+        expect(ps.getprop('Port')).to.equal('20001/test?arg1=test1');
+
+        ps = peer.peer_from_url('WS://localhost:8080/tcf;ID=abc');
+        expect(ps.url).to.equal('WS://localhost:8080/tcf;ID=abc');
+        expect(ps.getprop('Host')).to.equal('localhost');
+        expect(ps.getprop('ID')).to.equal('abc');
+    });
+
+    it('should connect over TCP and WS on IPv6', function () {
+        var protocol = new tcf.Protocol();
+        protocol.addCommandHandler('Pong', 'echo', (c, args) => [0, args[0]]);
+        var tcpServer = new tcf.Server('TCP:[::1]:0', protocol);
+        var wsServer = new tcf.Server('WS:[::1]:20012', protocol);
+        var tcpListening = new Promise(resolve => {
+            tcpServer.serv.server.once('listening', resolve);
+        });
+
+        function echo(url) {
+            return connectClient(url).then(client => client.sendCommand('Pong', 'echo', [url])
+                .then(res => {
+                    client.close();
+                    expect(res[1]).to.equal(url);
+                }));
+        }
+
+        // the port of the TCP server is known once it listens
+        return tcpListening.then(() => Promise.all([
+            echo('TCP:[::1]:' + tcpServer.ps.getprop('Port')),
+            echo('WS:[::1]:20012')
+        ]))
+        .finally(() => {
+            tcpServer.serv.server.close();
+            wsServer.serv.server.close();
+        });
+    });
+
+    it('should report server errors with the error event', function () {
+        var blocker = net.createServer();
+
+        return new Promise(resolve => { blocker.listen(20013, resolve); })
+            .then(() => new Promise(resolve => {
+                var wsServer = new tcf.Server('WS::20013', new tcf.Protocol());
+                wsServer.on('error', resolve);
+            }))
+            .then(err => {
+                expect(err.code).to.equal('EADDRINUSE');
+            })
+            .finally(() => { blocker.close(); });
+    });
+
+    it('should generate version 4 UUIDs', function () {
+        var crypto = require('crypto');
+        var utils = require('../src/utils.js');
+        var uuidV4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+        var randomUUID = crypto.randomUUID;
+
+        expect(utils.get_agent_id()).to.match(uuidV4);
+        expect(utils.randomUUID()).to.match(uuidV4);
+        try {
+            // browser fallback based on crypto.getRandomValues()
+            crypto.randomUUID = undefined;
+            expect(utils.randomUUID()).to.match(uuidV4);
+        }
+        finally {
+            crypto.randomUUID = randomUUID;
+        }
+    });
 });

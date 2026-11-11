@@ -93,6 +93,12 @@ function Server(url, protocol, options) {
         c.start();
         that.emit('channelConnected', c);
     };
+
+    this.serv.onerror = function serverError(error) {
+        // an 'error' event without listener would terminate the process
+        if (that.listenerCount('error') > 0) that.emit('error', error);
+        else console.error('TCF server error:', error);
+    };
 }
 
 Server.prototype = Object.create(require('events').EventEmitter.prototype);

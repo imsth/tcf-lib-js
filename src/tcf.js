@@ -37,8 +37,6 @@
  * @example "wss://192.168.1.1/"
  */
 
-/* global exports */
-
 require('./transports.js');
 
 module.exports = function(options) {

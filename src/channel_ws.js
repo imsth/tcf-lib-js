@@ -21,6 +21,7 @@
  */
 var webSocket = require('ws');
 var channel = require('./channel.js');
+var utils = require('./utils.js');
 
 var transport = {
     name: 'WS',
@@ -40,7 +41,7 @@ function connectClientWS(ps, options) {
     var port = ps.getprop('Port') || (ps.getprop('TransportName').toLowerCase() == 'ws' ? 80 : 443);
 
     if (!ps.url) {
-        ps.url = ps.getprop('TransportName').toLowerCase() + "://" + host + ':' + port;
+        ps.url = ps.getprop('TransportName').toLowerCase() + "://" + utils.urlHost(host) + ':' + port;
     }
 
     var clientChannel = {
@@ -64,14 +65,14 @@ function connectClientWS(ps, options) {
         };
 
         clientChannel.channel.flushOutput = function wsFlushOutput(typedArray) {
-            clientChannel.ws.send(typedArray.buffer);
+            clientChannel.ws.send(typedArray);
         };
 
         clientChannel.onconnect(null, clientChannel.channel);
     };
 
     clientChannel.ws.onmessage = function(event) {
-        clientChannel.channel.onData(event.data);
+        if (clientChannel.channel) clientChannel.channel.onData(event.data);
     };
 
     clientChannel.ws.onclose = function() {

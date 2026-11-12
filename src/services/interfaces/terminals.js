@@ -19,7 +19,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-var schemas = require('../schemas.js')
+var schemas = require('../schemas.js');
 var scs = schemas.types;
 var cmds = schemas.commands;
 
@@ -44,4 +44,4 @@ module.exports = {
         // E • Terminals • winSizeChanged • <string: terminal ID> • <int: newWidth> • <int: newHeight> •
         {name: "winSizeChanged", args: [scs.ID, {title : 'width', type: 'integer'}, {title : 'height', type: 'integer'}] }        
     ] 
-}
+};

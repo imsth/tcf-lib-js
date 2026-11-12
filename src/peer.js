@@ -33,24 +33,24 @@ function PeerServer(peerURL) {
     var data = peerURL.split(';');
     var peer = data[0];
 
-    var peerAddr = peer.split(':');
+    var sep = peer.indexOf(':');
 
-    if (peerAddr.length < 2) throw new Error("Invalid peer URL");
+    if (sep < 0) throw new Error("Invalid peer URL");
 
-    this.props.TransportName = peerAddr[0];
+    this.props.TransportName = peer.slice(0, sep);
 
-    if (peerAddr[1].startsWith("//")) {
+    var addr = peer.slice(sep + 1);
+    if (addr.startsWith("//")) {
         // The peer URL is already formed as a URL
         this.url = peerURL;
-        this.props.Host = peerAddr[1].slice(2);
+        addr = addr.slice(2);
     }
-    else {
-        this.props.Host = peerAddr[1];
-        // The WebSocket transport layer will create the 'url' property
-        // if not defined.
-    }
+    // else the WebSocket transport layer will create the 'url' property
 
-    this.props.Port = peerAddr[2];
+    // <host>[:<port>], an IPv6 host address is enclosed in brackets
+    var hostPort = /^(?:\[([^\]]*)\]|([^:]*))(?::(.*))?$/.exec(addr);
+    this.props.Host = hostPort[1] !== undefined ? hostPort[1] : hostPort[2];
+    this.props.Port = hostPort[3];
 
     /* Add extra configuration key/value pairs */
 
@@ -95,37 +95,6 @@ function peer_from_url(url) {
     return ps;
 }
 
-
-// Convert a TCF URL : (TCP|WS[S]):<host>([:<port>]|[<uri>]) to a WS[S] url
-// The TCF WS URL is of the form: wss://<host>([:<port>/tcf]|[<uri>])
-var peerFromUrl = function peerFromUrl(url) {
-    var pcol;
-    var items = [];
-    var peer = {};
-
-    if (!url || url === '') throw new Error('Invalid peer url');
-    if (url.indexOf("ws://", 0) === 0 || url.indexOf("wss://", 0) === 0) {
-        // url is already an TCF WS URL.
-        peer.url = url;
-        return peer;
-    }
-    items = url.split(":");
-    peer.prot = items[0];
-    peer.hostname = items[1];
-    peer.port = items[2];
-    if (url.substring(0, 3) === "TCP") peer.url = url;
-    else {
-        if (url.substring(0, 3) === "WSS") pcol = "wss://";
-        else if (url.substring(0, 3) === "WS:") pcol = "ws://";
-        else return null;
-        peer.url = pcol + peer.hostname;
-        if (peer.port) {
-            peer.url += ":" + peer.port + "/tcf";
-        }
-    }
-    /* + "/xxx" bit is for IE10 workaround */
-    return peer;
-};
 
 module.exports = {
     peer_from_url: peer_from_url

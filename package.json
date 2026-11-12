@@ -5,6 +5,7 @@
   "main": "src/tcf.js",
   "browser": {
     "ws": "./src/browser-ws.js",
+    "crypto": false,
     "./src/transports.js": "./src/browser-transports.js"
   },
   "license": "MIT",
@@ -21,24 +22,25 @@
   "dependencies": {
     "atob": "^2.0.3",
     "btoa": "^1.1.2",
-    "json-bigint": "^0.2.1",
-    "uuid": "^2.0.3",
-    "ws": "^1.1.1"
+    "json-bigint": "^1.0.0",
+    "ws": "^8.22.2"
   },
   "devDependencies": {
-    "bower": "^1.7.7",
-    "browserify": "^14.0.0",
-    "chai": "^2.3.0",
-    "chai-as-promised": "~5.1.0",
-    "eslint": "^3.7.1",
-    "jsdoc": "^3.4.3",
-    "mocha": "*",
+    "@eslint/js": "^10.0.1",
+    "browserify": "^17.0.1",
+    "chai": "^4.5.0",
+    "chai-as-promised": "^7.1.2",
+    "eslint": "^10.14.0",
+    "globals": "^17.14.0",
+    "jsdoc": "^4.0.5",
+    "mocha": "^12.0.3",
     "xunit-file": "^0.0.7"
   },
   "scripts": {
-    "postinstall": "bower install || echo no bower",
-    "build": "mkdir -p dist && browserify src/tcf.js -s tcf -i atob -i btoa -i ./src/server.js -i ./src/channel_server_ws.js > dist/tcf.js",
-    "test": "./node_modules/.bin/mocha --reporter spec --full-trace test/**/*.js",
-    "doc": "./node_modules/.bin/jsdoc src/tcf.js src/channel.js src/protocol.js src/client.js src/server.js src/services/interfaces.js -R ./README.md -d ./doc/"
+    "build": "node -e \"require('fs').mkdirSync('dist', {recursive: true})\" && browserify src/tcf.js -s tcf -i atob -i btoa -i ./src/server.js -i ./src/channel_server_ws.js -o dist/tcf.js",
+    "lint": "eslint .",
+    "pretest": "npm run lint",
+    "test": "mocha --exit --reporter spec --full-trace \"test/*.js\"",
+    "doc": "jsdoc src/tcf.js src/channel.js src/protocol.js src/client.js src/server.js src/services/interfaces.js -R ./README.md -d ./doc/"
   }
 }

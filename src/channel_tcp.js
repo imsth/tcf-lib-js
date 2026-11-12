@@ -48,18 +48,17 @@ function connectClientTCP(ps, options) {
         };
 
         clientChannel.channel.flushOutput = function tcpFlushOutput(typedArray) {
-            var buf = new Buffer(typedArray.buffer);
-            clientChannel.socket.write(buf);
+            clientChannel.socket.write(Buffer.from(typedArray.buffer, typedArray.byteOffset, typedArray.byteLength));
         };
 
         clientChannel.onconnect(null, clientChannel.channel);
     });
 
     clientChannel.socket.on('data', function(buffer) {
-        clientChannel.channel.onData(buffer.buffer);
+        clientChannel.channel.onData(buffer);
     });
 
-    clientChannel.socket.on('end', function() {
+    clientChannel.socket.on('close', function() {
         clientChannel.channel && clientChannel.channel.onClosed();
     });
 
@@ -77,19 +76,14 @@ function connectClientTCP(ps, options) {
 
 function createServerTCP(ps) {
     var host = ps.getprop('Host') || '0.0.0.0';
-    var port = ps.getprop('Port');
-    var def_port = false;
-
-    if (!port) {
-        port = 1534;
-        def_port = true;
-    }
+    var port = ps.getprop('Port') || 1534;
+    var addrInUse = false;
 
     var serverChannel = {
         ps: ps,
         server: null,
-        onconnection: null
-        //channel: null
+        onconnection: null,
+        onerror: null
     };
 
     serverChannel.server = require('net').createServer(function(socket) {
@@ -104,7 +98,7 @@ function createServerTCP(ps) {
         });
 
         socket.on('data', function(buffer) {
-            _channel.onData(buffer.buffer);
+            _channel.onData(buffer);
         });
 
         socket.on('error', function(error) {
@@ -116,8 +110,7 @@ function createServerTCP(ps) {
         };
 
         _channel.flushOutput = function tcpFlushOutput(typedArray) {
-            var buf = new Buffer(typedArray.buffer);
-            socket.write(buf);
+            socket.write(Buffer.from(typedArray.buffer, typedArray.byteOffset, typedArray.byteLength));
         };
 
         serverChannel.onconnection(serverChannel, _channel);
@@ -125,15 +118,17 @@ function createServerTCP(ps) {
 
     serverChannel.server.on('error', function(error) {
         if (error.code == 'EADDRINUSE') {
+            // wait until the port is released, e.g. by a previous instance
+            if (!addrInUse) console.error('TCF server: port ' + port + ' is in use, retrying');
+            addrInUse = true;
             setTimeout(function() {
                 serverChannel.server.close();
                 serverChannel.server.listen(port, host, server_listening);
             }, 1000);
         }
-    });
-
-    serverChannel.server.on('close', function() {
-
+        else if (serverChannel.onerror) {
+            serverChannel.onerror(error);
+        }
     });
 
     serverChannel.server.listen(port, host, server_listening);

@@ -19,12 +19,10 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-var schemas = require('../schemas.js')
+var schemas = require('../schemas.js');
 var types = schemas.types;
 var cmds =  schemas.commands;
 
-var attrsList = {title: 'attrsList', type:'array'};
-var agentID = {title: 'agentID', type:'string'};
 var bad_addresses = {title:'bad_addresses', type:'object'};
 
 module.exports = {

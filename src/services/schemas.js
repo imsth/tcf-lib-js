@@ -45,4 +45,4 @@ module.exports = {
         getContext: { name: "getContext", args: [types.ctxID], results: [types.err, types.ctx] },
         getChildren: { name: "getChildren", args: [types.ctxID], results: [types.err, types.ctxIDs] },
     }
-}
+};

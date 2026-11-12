@@ -23,13 +23,10 @@
  * Basic tests for node-tcf-client
  */
 
-/* global describe, before, it */
-
 "use strict";
 
 var chai = require("chai");
 var expect = chai.expect;
-var assert = chai.assert;
 var chaiAsPromised = require("chai-as-promised");
 var fs = require('fs');
 
@@ -37,33 +34,27 @@ chai.should();
 chai.use(chaiAsPromised);
 var tcf = require('../src/tcf');
 
-var DEBUG = true;                          // Set to true to enable debug log
-
 describe('tcf-client', function () {
-    var server, serverSec;
+    var server;
     var wsurl = 'WS::20001';
     var wssurl = 'WSS:localhost:20004';
-
-    function log(msg) {
-        if (DEBUG) console.log('LOG: ', msg);
-    }
 
     before(function () {
         /** create a server with a Pong Command */
         var protocol = new tcf.Protocol();
         protocol.addCommandHandler('Pong', 'echo', function (c, args) {
             var msg = args[0];
-            if (!msg) throw { msg: 'Invalid argument' };
+            if (!msg) throw new Error('Invalid argument');
             return ([0, msg]);
         });
 
         protocol.addCommandHandler('Pong', 'error', function (c, args) {
-            if (!args) throw { msg: 'Invalid argument' };
+            if (!args) throw new Error('Invalid argument');
             return ([{ error: "this is an error object" }]);
         });
 
         protocol.addCommandHandler('Pong', 'delay', function (c, args) {
-            if (!args) throw { msg: 'Invalid argument' };
+            if (!args) throw new Error('Invalid argument');
             return new Promise((resolve, reject) => {
                 setTimeout(() => {
                     resolve([0]);
@@ -73,7 +64,7 @@ describe('tcf-client', function () {
 
         /* test service ping */
         server = new tcf.Server(wsurl, protocol);
-        serverSec = new tcf.Server(wssurl, protocol, {
+        new tcf.Server(wssurl, protocol, {
             cert: fs.readFileSync('test/certs/server-crt.pem'),
             key: fs.readFileSync('test/certs/server-key.pem'),
             ca: fs.readFileSync('test/certs/ca-crt.pem'),
@@ -94,7 +85,7 @@ describe('tcf-client', function () {
                 () => { reject("channel Closed"); },
                 () => { reject("channel Error"); }
             );
-        })
+        });
     });
 
     it('Server Connection without server', function (done) {
@@ -129,7 +120,7 @@ describe('tcf-client', function () {
                             client.close();
                             resolve();
                         })
-                        .catch(err => { reject(err) })
+                        .catch(err => { reject(err); });
                 },
                 () => { reject("channel Closed"); },
                 () => { reject("channel Error"); }
@@ -150,7 +141,7 @@ describe('tcf-client', function () {
                             resolve();
                             client.close();
                         })
-                        .catch(err => { reject(err) })
+                        .catch(err => { reject(err); });
                 },
                 () => { reject("channel Closed"); },
                 () => { reject("channel Error"); }
@@ -208,7 +199,7 @@ describe('tcf-client', function () {
                             resolve();
                             client.close();
                         })
-                        .catch(err => { reject(err) });
+                        .catch(err => { reject(err); });
                 },
                 () => { reject("channel Closed"); },
                 () => { reject("channel Error"); }
@@ -219,7 +210,7 @@ describe('tcf-client', function () {
     it('should trigger the channelConnected event', function () {
         return new Promise((resolve, reject) => {
             var client = new tcf.Client();
-            server.on("channelConnected", (c) => { resolve() });
+            server.on("channelConnected", (c) => { resolve(); });
             client.connect(wsurl,
                 () => {
                     client.close();
@@ -254,7 +245,6 @@ describe('tcf-client', function () {
     });
 
     it('should fail connection to a wss server', function () {
-        var path = "/test?arg1=test1";
         return new Promise((resolve, reject) => {
             var client = new tcf.Client();
             client.connect(wssurl,
@@ -268,7 +258,6 @@ describe('tcf-client', function () {
     });
 
     it('should  connect to a wss server', function () {
-        var path = "/test?arg1=test1";
         return new Promise((resolve, reject) => {
             var client = new tcf.Client();
             client.connect(wssurl, {

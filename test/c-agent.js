@@ -24,13 +24,9 @@
  * Basic tests for node-tcf-client against the opensource agent
  */
 
-/* global describe, before, it */
-
 "use strict";
 
 var chai = require("chai");
-var expect = chai.expect;
-var assert = chai.assert;
 var chaiAsPromised = require("chai-as-promised");
 
 chai.should();
@@ -45,7 +41,7 @@ var peer = process.env['TCF_AGENT_PEER'] || 'TCP::1534';
     })
     .catch(error => {
         tests(error);
-    })
+    });
 
 function tests(error) {
 
@@ -68,7 +64,7 @@ function tests(error) {
                 .catch(error => {
                     client = null;
                     return done(error);
-                })
+                });
         });
 
         afterEach(function(done) {
